@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ReservationStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
+model Parcel {
+  id        String   @id            // z.B. "field-0001", "goal-1", ...
+  type      String
+  priceCents Int
+  createdAt DateTime @default(now())
+}
+
+model Reservation {
+  id          String            @id
+  buyerName   String
+  buyerEmail  String
+  anonymous   Boolean           @default(false)
+
+  // Optional (nur wenn ihr es wirklich braucht)
+  buyerAddress String?
+  buyerCity    String?
+  buyerZip     String?
+
+  totalCents  Int
+  status      ReservationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  expiresAt   DateTime
+  paidAt      DateTime?
+
+  items       ReservationItem[]
+}
+
+model ReservationItem {
+  id            String   @id @default(cuid())
+  reservationId String
+  parcelId      String
+
+  // Denormalisiert, damit wir später einen Unique-Index für "active" machen können
+  active        Boolean  @default(true)
+
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+  @@index([parcelId])
+  @@unique([parcelId, active]) // sorgt dafür: pro parcelId nur 1x active=true
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")          // pooled (für App-Runtime)
+  directUrl = env("DATABASE_URL_UNPOOLED") // unpooled (für Migrationen), falls vorhanden
+}

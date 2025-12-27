@@ -25,3 +25,4 @@ pnpm-debug.log*
 # Build / cache
 coverage/
 .vercel/
+/lib/generated/prisma
