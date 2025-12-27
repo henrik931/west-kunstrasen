@@ -47,6 +47,14 @@ function groupParcelsByType(parcelIds: string[]): ParcelSummary[] {
   return Object.values(groups);
 }
 
+function getPurposeText(reservation: ReservationDTO) {
+  const donor =
+    reservation.anonymous || !reservation.donorName
+      ? "Anonym"
+      : reservation.donorName;
+  return `Kunstrasen ${reservation.id} - ${donor}`;
+}
+
 function generateEmailHtml(reservation: ReservationDTO): string {
   const parcelSummary = groupParcelsByType(reservation.parcels);
 
@@ -132,7 +140,7 @@ function generateEmailHtml(reservation: ReservationDTO): string {
           <strong>Empfänger:</strong> SC West Köln 1900/11 e.V.<br>
           <strong>IBAN:</strong> DE XX XXXX XXXX XXXX XXXX XX<br>
           <strong>BIC:</strong> XXXXXXXX<br>
-          <strong>Verwendungszweck:</strong> Kunstrasen ${reservation.id}<br>
+          <strong>Verwendungszweck:</strong> ${getPurposeText(reservation)}<br>
           <strong>Betrag:</strong> ${formatEuro(reservation.totalAmount)}
         </p>
       </div>
@@ -196,7 +204,7 @@ ZAHLUNGSINFORMATIONEN
 Empfänger: SC West Köln 1900/11 e.V.
 IBAN: DE XX XXXX XXXX XXXX XXXX XX
 BIC: XXXXXXXX
-Verwendungszweck: Kunstrasen ${reservation.id}
+Verwendungszweck: ${getPurposeText(reservation)}
 Betrag: ${formatEuro(reservation.totalAmount)}
 
 WICHTIG: Bitte überweisen Sie den Betrag innerhalb von 14 Tagen.

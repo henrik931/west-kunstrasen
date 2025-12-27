@@ -4,6 +4,7 @@ import { calculateTotal } from '@/lib/parcels'
 import { sendReservationEmail } from '@/lib/mailjet'
 import { generateReservationId } from '@/lib/utils'
 import { createReservation, expireReservations } from '@/lib/reservations'
+import type { ReserveRequest, ReserveResponse } from '@/lib/types'
 
 export const runtime = "nodejs"
 
@@ -11,25 +12,69 @@ const reserveSchema = z.object({
   parcels: z.array(z.string()).min(1, 'Bitte wählen Sie mindestens eine Parzelle aus'),
   buyerName: z.string().min(2, 'Bitte geben Sie Ihren Namen ein'),
   buyerEmail: z.string().email('Bitte geben Sie eine gültige E-Mail-Adresse ein'),
-  buyerAddress: z.string().min(5, 'Bitte geben Sie Ihre Adresse ein'),
-  buyerCity: z.string().min(2, 'Bitte geben Sie Ihre Stadt ein'),
-  buyerZip: z.string().min(4, 'Bitte geben Sie Ihre PLZ ein'),
+  donorName: z.string().optional().nullable(),
+  anonymous: z.boolean(),
+  receiptRequested: z.boolean(),
+  buyerAddress: z.string().optional().nullable(),
+  buyerCity: z.string().optional().nullable(),
+  buyerZip: z.string().optional().nullable(),
+}).superRefine((data, ctx) => {
+  if (!data.anonymous && (!data.donorName || data.donorName.trim().length < 2)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['donorName'],
+      message: 'Bitte geben Sie den Namen für die Spendertafel an',
+    })
+  }
+
+  if (data.receiptRequested) {
+    if (!data.buyerAddress || data.buyerAddress.trim().length < 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['buyerAddress'],
+        message: 'Bitte geben Sie Ihre Adresse ein',
+      })
+    }
+    if (!data.buyerCity || data.buyerCity.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['buyerCity'],
+        message: 'Bitte geben Sie Ihre Stadt ein',
+      })
+    }
+    if (!data.buyerZip || data.buyerZip.trim().length < 4) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['buyerZip'],
+        message: 'Bitte geben Sie Ihre PLZ ein',
+      })
+    }
+  }
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const validatedData = reserveSchema.parse(body)
+    const validatedData = reserveSchema.parse(body) as ReserveRequest
 
     const totalAmount = calculateTotal(validatedData.parcels)
+    if (validatedData.receiptRequested && totalAmount < 300) {
+      return NextResponse.json(
+        { error: 'Eine Spendenquittung ist erst ab 300 € möglich.' },
+        { status: 400 }
+      )
+    }
     const reservationInput = {
       id: generateReservationId(),
       parcels: validatedData.parcels,
       buyerName: validatedData.buyerName,
       buyerEmail: validatedData.buyerEmail,
-      buyerAddress: validatedData.buyerAddress,
-      buyerCity: validatedData.buyerCity,
-      buyerZip: validatedData.buyerZip,
+      donorName: validatedData.donorName ?? null,
+      anonymous: validatedData.anonymous,
+      receiptRequested: validatedData.receiptRequested,
+      buyerAddress: validatedData.buyerAddress ?? undefined,
+      buyerCity: validatedData.buyerCity ?? undefined,
+      buyerZip: validatedData.buyerZip ?? undefined,
       totalAmount,
     }
 
@@ -41,11 +86,13 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send confirmation email for reservation:', reservation.id)
     }
 
-    return NextResponse.json({
+    const response: ReserveResponse = {
       success: true,
       reservationId: reservation.id,
       totalAmount,
-    })
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     if (error instanceof Error && error.message === 'PARCEL_NOT_AVAILABLE') {
       return NextResponse.json(

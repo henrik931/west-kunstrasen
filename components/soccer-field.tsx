@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useCallback } from 'react'
 import { useParcelContext } from '@/lib/parcel-context'
-import { FIELD_CONFIG } from '@/lib/parcels'
+import { FIELD_CONFIG, getBlockedFieldCells } from '@/lib/parcels'
 import { cn } from '@/lib/utils'
 
 const VIEWBOX_WIDTH = 1050
@@ -77,11 +77,14 @@ export function SoccerField() {
     return 'pointer'
   }, [isAvailable])
 
+  const blockedCells = useMemo(() => getBlockedFieldCells(), [])
+
   const fieldParcels = useMemo(() => {
     const parcels = []
     for (let row = 0; row < FIELD_CONFIG.GRID_ROWS; row++) {
       for (let col = 0; col < FIELD_CONFIG.GRID_COLS; col++) {
         const id = `field-${row}-${col}`
+        if (blockedCells.has(id)) continue
         parcels.push({
           id,
           x: FIELD_PADDING + col * gridCellWidth,
@@ -92,7 +95,12 @@ export function SoccerField() {
       }
     }
     return parcels
-  }, [gridCellWidth, gridCellHeight])
+  }, [gridCellWidth, gridCellHeight, blockedCells])
+
+  const handleToggleParcel = useCallback((id: string) => {
+    if (blockedCells.has(id)) return
+    toggleParcel(id)
+  }, [blockedCells, toggleParcel])
 
   return (
     <div className="relative w-full">
@@ -181,7 +189,7 @@ export function SoccerField() {
                 'transition-all duration-150',
                 isSelected(parcel.id) && 'animate-pulse-yellow'
               )}
-              onClick={() => toggleParcel(parcel.id)}
+              onClick={() => handleToggleParcel(parcel.id)}
               onMouseEnter={() => setHoveredParcel(parcel.id)}
               onMouseLeave={() => setHoveredParcel(null)}
             />
@@ -247,7 +255,7 @@ export function SoccerField() {
               isSelected('kickoff') && 'animate-pulse-yellow'
             )}
             filter={isSelected('kickoff') || hoveredParcel === 'kickoff' ? 'url(#glow)' : undefined}
-            onClick={() => toggleParcel('kickoff')}
+            onClick={() => handleToggleParcel('kickoff')}
             onMouseEnter={() => setHoveredParcel('kickoff')}
             onMouseLeave={() => setHoveredParcel(null)}
           />
@@ -297,7 +305,7 @@ export function SoccerField() {
               isSelected('penalty-left') && 'animate-pulse-yellow'
             )}
             filter={isSelected('penalty-left') || hoveredParcel === 'penalty-left' ? 'url(#glow)' : undefined}
-            onClick={() => toggleParcel('penalty-left')}
+            onClick={() => handleToggleParcel('penalty-left')}
             onMouseEnter={() => setHoveredParcel('penalty-left')}
             onMouseLeave={() => setHoveredParcel(null)}
           />
@@ -332,7 +340,7 @@ export function SoccerField() {
                     isSelected(id) && 'animate-pulse-yellow'
                   )}
                   filter={isSelected(id) || hoveredParcel === id ? 'url(#glow)' : undefined}
-                  onClick={() => toggleParcel(id)}
+                  onClick={() => handleToggleParcel(id)}
                   onMouseEnter={() => setHoveredParcel(id)}
                   onMouseLeave={() => setHoveredParcel(null)}
                 />
@@ -387,7 +395,7 @@ export function SoccerField() {
               isSelected('penalty-right') && 'animate-pulse-yellow'
             )}
             filter={isSelected('penalty-right') || hoveredParcel === 'penalty-right' ? 'url(#glow)' : undefined}
-            onClick={() => toggleParcel('penalty-right')}
+            onClick={() => handleToggleParcel('penalty-right')}
             onMouseEnter={() => setHoveredParcel('penalty-right')}
             onMouseLeave={() => setHoveredParcel(null)}
           />
@@ -422,7 +430,7 @@ export function SoccerField() {
                     isSelected(id) && 'animate-pulse-yellow'
                   )}
                   filter={isSelected(id) || hoveredParcel === id ? 'url(#glow)' : undefined}
-                  onClick={() => toggleParcel(id)}
+                  onClick={() => handleToggleParcel(id)}
                   onMouseEnter={() => setHoveredParcel(id)}
                   onMouseLeave={() => setHoveredParcel(null)}
                 />

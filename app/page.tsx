@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { SoccerField } from "@/components/soccer-field";
 import { ShoppingCart } from "@/components/shopping-cart";
@@ -25,8 +26,15 @@ function Header() {
           target="_blank"
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
-          <div className="w-10 h-10 bg-sc-yellow rounded-full flex items-center justify-center">
-            <span className="font-bold text-sc-navy text-sm">SCW</span>
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 bg-white flex items-center justify-center">
+            <Image
+              src="/scwestlogo.png"
+              alt="SC West Köln Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+              priority
+            />
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">SC West Köln</h1>

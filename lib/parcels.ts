@@ -27,6 +27,7 @@ export const FIELD_CONFIG = {
 
 export function generateAllParcels(): Parcel[] {
   const parcels: Parcel[] = [];
+  const blocked = getBlockedFieldCells();
 
   for (let i = 0; i < 5; i++) {
     parcels.push({
@@ -67,8 +68,10 @@ export function generateAllParcels(): Parcel[] {
 
   for (let row = 0; row < FIELD_CONFIG.GRID_ROWS; row++) {
     for (let col = 0; col < FIELD_CONFIG.GRID_COLS; col++) {
+      const id = `field-${row}-${col}`;
+      if (blocked.has(id)) continue;
       parcels.push({
-        id: `field-${row}-${col}`,
+        id,
         type: "field",
         price: FIELD_CONFIG.PRICES.field,
         row,
@@ -78,6 +81,32 @@ export function generateAllParcels(): Parcel[] {
   }
 
   return parcels;
+}
+
+export function getBlockedFieldCells(): Set<string> {
+  const blocked = new Set<string>();
+  const rowCenter = Math.floor(FIELD_CONFIG.GRID_ROWS / 2);
+  const colCenter = Math.floor(FIELD_CONFIG.GRID_COLS / 2);
+
+  const centerRows = [rowCenter - 1, rowCenter];
+  const centerCols = [colCenter - 1, colCenter];
+
+  for (const row of centerRows) {
+    for (const col of centerCols) {
+      blocked.add(`field-${row}-${col}`);
+    }
+  }
+
+  const penaltyRows = [rowCenter - 1, rowCenter];
+  const colLeft = 5;
+  const colRight = FIELD_CONFIG.GRID_COLS - 1 - 5;
+
+  for (const row of penaltyRows) {
+    blocked.add(`field-${row}-${colLeft}`);
+    blocked.add(`field-${row}-${colRight}`);
+  }
+
+  return blocked;
 }
 
 export function getParcelById(id: string): Parcel | undefined {
@@ -111,6 +140,9 @@ export function getParcelById(id: string): Parcel | undefined {
   }
 
   if (id.startsWith("field-")) {
+    if (getBlockedFieldCells().has(id)) {
+      return undefined;
+    }
     const parts = id.split("-");
     const row = parseInt(parts[1], 10);
     const col = parseInt(parts[2], 10);

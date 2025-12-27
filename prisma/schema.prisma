@@ -31,6 +31,8 @@ model Reservation {
   buyerName   String
   buyerEmail  String
   anonymous   Boolean           @default(false)
+  donorName   String?
+  receiptRequested Boolean      @default(false)
 
   // Optional (nur wenn ihr es wirklich braucht)
   buyerAddress String?

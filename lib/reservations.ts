@@ -12,10 +12,14 @@ const STATUS_MAP: Record<PrismaReservationStatus, ReservationStatus> = {
   CANCELLED: "cancelled",
 };
 
+
 function toReservationDTO(reservation: {
   id: string;
   buyerName: string;
   buyerEmail: string;
+  donorName: string | null;
+  anonymous: boolean;
+  receiptRequested: boolean;
   buyerAddress: string | null;
   buyerCity: string | null;
   buyerZip: string | null;
@@ -31,6 +35,9 @@ function toReservationDTO(reservation: {
     parcels: reservation.items.map((item) => item.parcelId),
     buyerName: reservation.buyerName,
     buyerEmail: reservation.buyerEmail,
+    donorName: reservation.donorName,
+    anonymous: reservation.anonymous,
+    receiptRequested: reservation.receiptRequested,
     buyerAddress: reservation.buyerAddress,
     buyerCity: reservation.buyerCity,
     buyerZip: reservation.buyerZip,
@@ -47,6 +54,9 @@ export interface CreateReservationInput {
   parcels: string[];
   buyerName: string;
   buyerEmail: string;
+  donorName?: string | null;
+  anonymous: boolean;
+  receiptRequested: boolean;
   buyerAddress?: string;
   buyerCity?: string;
   buyerZip?: string;
@@ -124,9 +134,12 @@ export async function createReservation(
           id: input.id,
           buyerName: input.buyerName,
           buyerEmail: input.buyerEmail,
-          buyerAddress: input.buyerAddress ?? null,
-          buyerCity: input.buyerCity ?? null,
-          buyerZip: input.buyerZip ?? null,
+          donorName: input.anonymous ? null : input.donorName ?? null,
+          anonymous: input.anonymous,
+          receiptRequested: input.receiptRequested,
+          buyerAddress: input.receiptRequested ? input.buyerAddress ?? null : null,
+          buyerCity: input.receiptRequested ? input.buyerCity ?? null : null,
+          buyerZip: input.receiptRequested ? input.buyerZip ?? null : null,
           totalCents: Math.round(input.totalAmount * 100),
           expiresAt,
         },

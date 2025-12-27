@@ -20,6 +20,7 @@ export function formatEuro(euros: number): string {
 }
 
 export function generateReservationId(): string {
-  return `RES-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+  const timePart = Date.now().toString(36).toUpperCase().slice(-4)
+  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase()
+  return `RES-${timePart}${randomPart}`
 }
-

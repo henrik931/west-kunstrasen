@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParcelContext } from '@/lib/parcel-context'
 import { formatEuro } from '@/lib/utils'
 import { getParcelById, FIELD_CONFIG } from '@/lib/parcels'
@@ -58,10 +58,16 @@ export function ShoppingCart() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successReservationId, setSuccessReservationId] = useState<string | null>(null)
+  const [successDonorName, setSuccessDonorName] = useState<string | null>(null)
+  const [successAnonymous, setSuccessAnonymous] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    donorName: '',
+    anonymous: false,
+    receiptRequested: false,
     address: '',
     city: '',
     zip: '',
@@ -70,6 +76,13 @@ export function ShoppingCart() {
   const total = getTotal()
   const count = selectedParcels.size
   const groups = groupSelectedParcels(selectedParcels)
+  const canRequestReceipt = total >= 300
+
+  useEffect(() => {
+    if (!canRequestReceipt && formData.receiptRequested) {
+      setFormData(prev => ({ ...prev, receiptRequested: false }))
+    }
+  }, [canRequestReceipt, formData.receiptRequested])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,9 +97,12 @@ export function ShoppingCart() {
           parcels: Array.from(selectedParcels),
           buyerName: formData.name,
           buyerEmail: formData.email,
-          buyerAddress: formData.address,
-          buyerCity: formData.city,
-          buyerZip: formData.zip,
+          donorName: formData.donorName,
+          anonymous: formData.anonymous,
+          receiptRequested: formData.receiptRequested,
+          buyerAddress: formData.receiptRequested ? formData.address : null,
+          buyerCity: formData.receiptRequested ? formData.city : null,
+          buyerZip: formData.receiptRequested ? formData.zip : null,
         }),
       })
 
@@ -97,8 +113,20 @@ export function ShoppingCart() {
       }
 
       setIsSuccess(true)
+      setSuccessReservationId(data.reservationId)
+      setSuccessAnonymous(formData.anonymous)
+      setSuccessDonorName(formData.anonymous ? null : formData.donorName.trim())
       clearSelection()
-      setFormData({ name: '', email: '', address: '', city: '', zip: '' })
+      setFormData({
+        name: '',
+        email: '',
+        donorName: '',
+        anonymous: false,
+        receiptRequested: false,
+        address: '',
+        city: '',
+        zip: '',
+      })
       await refreshStatuses()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten')
@@ -111,6 +139,9 @@ export function ShoppingCart() {
     setIsCheckout(false)
     setIsSuccess(false)
     setError(null)
+    setSuccessReservationId(null)
+    setSuccessDonorName(null)
+    setSuccessAnonymous(false)
   }
 
   return (
@@ -143,9 +174,27 @@ export function ShoppingCart() {
                 Reservierung erfolgreich!
               </DialogTitle>
               <DialogDescription>
-                Vielen Dank für Ihre Reservierung. Sie erhalten in Kürze eine E-Mail mit den Zahlungsinformationen.
+                Vielen Dank für Ihre Spende. Sie erhalten in Kürze eine E-Mail mit den Zahlungsinformationen.
               </DialogDescription>
             </DialogHeader>
+            <div className="bg-muted p-4 rounded-lg space-y-3 text-sm">
+              <div>
+                <p className="font-medium">Zahlungsinformationen</p>
+                <p>Empfänger: SC West Köln 1900/11 e.V.</p>
+                <p>IBAN: DE46 3806 0185 4901 5910 62</p>
+              </div>
+              <div>
+                <p className="font-medium">Verwendungszweck</p>
+                <p>
+                  Kunstrasen {successReservationId ?? '—'}
+                  {" - "}
+                  {successAnonymous || !successDonorName ? 'Anonym' : successDonorName}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Bitte unbedingt die Reservierungs-ID im Verwendungszweck angeben (Zuordnung).
+              </p>
+            </div>
             <DialogFooter>
               <DialogClose render={<Button />}>
                 Schließen
@@ -155,7 +204,7 @@ export function ShoppingCart() {
         ) : isCheckout ? (
           <>
             <DialogHeader>
-              <DialogTitle>Reservierung abschließen</DialogTitle>
+              <DialogTitle>Spende abschließen</DialogTitle>
               <DialogDescription>
                 Bitte geben Sie Ihre Kontaktdaten ein. Nach der Reservierung erhalten Sie eine E-Mail mit den Zahlungsinformationen.
               </DialogDescription>
@@ -163,7 +212,7 @@ export function ShoppingCart() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-1 block">Name *</label>
+                <label className="text-sm font-medium mb-1 block">Kontaktname *</label>
                 <Input
                   required
                   value={formData.name}
@@ -183,36 +232,88 @@ export function ShoppingCart() {
                 />
               </div>
 
-              <div>
-                <label className="text-sm font-medium mb-1 block">Straße und Hausnummer *</label>
-                <Input
-                  required
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Musterstraße 123"
-                />
+              <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={formData.anonymous}
+                    onChange={(e) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        anonymous: e.target.checked,
+                        donorName: e.target.checked ? '' : prev.donorName,
+                      }))
+                    }
+                    className="h-4 w-4 rounded border-white/30 bg-white/10 text-sc-yellow focus:ring-sc-yellow"
+                  />
+                  Anonym spenden
+                </label>
+
+                {!formData.anonymous && (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Name auf Spendertafel *</label>
+                    <Input
+                      required
+                      value={formData.donorName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, donorName: e.target.value }))}
+                      placeholder="Familie Mustermann"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">PLZ *</label>
-                  <Input
-                    required
-                    value={formData.zip}
-                    onChange={(e) => setFormData(prev => ({ ...prev, zip: e.target.value }))}
-                    placeholder="50825"
+              <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={formData.receiptRequested}
+                    disabled={!canRequestReceipt}
+                    onChange={(e) => setFormData(prev => ({ ...prev, receiptRequested: e.target.checked }))}
+                    className="h-4 w-4 rounded border-white/30 bg-white/10 text-sc-yellow focus:ring-sc-yellow disabled:opacity-50"
                   />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Stadt *</label>
-                  <Input
-                    required
-                    value={formData.city}
-                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                    placeholder="Köln"
-                  />
-                </div>
+                  Spendenquittung (ab 300 €)
+                </label>
+                {!canRequestReceipt && (
+                  <p className="text-xs text-white/50">
+                    Eine Spendenquittung ist erst ab 300 € möglich.
+                  </p>
+                )}
               </div>
+
+              {formData.receiptRequested && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Straße und Hausnummer *</label>
+                    <Input
+                      required
+                      value={formData.address}
+                      onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Musterstraße 123"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">PLZ *</label>
+                      <Input
+                        required
+                        value={formData.zip}
+                        onChange={(e) => setFormData(prev => ({ ...prev, zip: e.target.value }))}
+                        placeholder="50825"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Stadt *</label>
+                      <Input
+                        required
+                        value={formData.city}
+                        onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                        placeholder="Köln"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {error && (
                 <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg text-sm">
@@ -238,7 +339,7 @@ export function ShoppingCart() {
                       Wird gesendet...
                     </>
                   ) : (
-                    'Jetzt reservieren'
+                    'Jetzt spenden'
                   )}
                 </Button>
               </DialogFooter>
