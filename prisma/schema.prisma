@@ -8,6 +8,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+}
+
 enum ReservationStatus {
   PENDING
   PAID
@@ -55,10 +59,4 @@ model ReservationItem {
   @@index([reservationId])
   @@index([parcelId])
   @@unique([parcelId, active]) // sorgt dafür: pro parcelId nur 1x active=true
-}
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")          // pooled (für App-Runtime)
-  directUrl = env("DATABASE_URL_UNPOOLED") // unpooled (für Migrationen), falls vorhanden
 }
