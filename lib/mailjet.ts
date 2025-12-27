@@ -214,7 +214,7 @@ export async function sendReservationEmail(
   reservation: Reservation
 ): Promise<boolean> {
   // Mock mode: log email instead of sending
-  if (!process.env.MAILJET_API_KEY) {
+if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {
     console.log("\n[MOCK EMAIL] ========================================");
     console.log(`To: ${reservation.buyerName} <${reservation.buyerEmail}>`);
     console.log(
