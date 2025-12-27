@@ -26,12 +26,12 @@ function Header() {
           target="_blank"
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 bg-white flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-white flex items-center justify-center">
             <Image
               src="/scwestlogo.png"
               alt="SC West Köln Logo"
-              width={40}
-              height={40}
+              width={64}
+              height={64}
               className="object-contain"
               priority
             />
@@ -212,19 +212,19 @@ function FAQSection() {
   const faqs = [
     {
       question: "Wie funktioniert die Zahlung?",
-      answer: `Nach der Reservierung erhalten Sie eine E-Mail mit allen Zahlungsinformationen. Der Betrag ist per Banküberweisung zu zahlen. Bitte verwenden Sie unbedingt den in der E-Mail angegebenen Verwendungszweck, damit wir Ihre Zahlung zuordnen können.`,
+      answer: `Nach der Reservierung erhalten Sie eine E-Mail mit allen Zahlungsinformationen. Die Spende erfolgt per Banküberweisung. Bitte verwenden Sie unbedingt den angegebenen Verwendungszweck, damit wir Ihre Spende zuordnen können.`,
     },
     {
       question: "Welche Bankverbindung gilt für die Überweisung?",
-      answer: `Die Bankverbindung finden Sie in Ihrer Bestätigungs-E-Mail. Empfänger: SC West Köln 1900/11 e.V. Bitte geben Sie als Verwendungszweck Ihre Reservierungsnummer an.`,
+      answer: `Empfänger: SC West Köln 1900/11 e.V. IBAN: DE46 3806 0185 4901 5910 62. Verwendungszweck: Kunstrasen {Reservierungs-ID} - {Name auf Spendertafel bzw. Anonym}.`,
     },
     {
       question: "Was passiert nach der Zahlung?",
-      answer: `Sobald wir den Zahlungseingang bestätigt haben, werden Ihre Parzellen als verkauft markiert und Sie erhalten eine finale Bestätigung. Die Parzellen sind dann dauerhaft Ihnen zugeordnet.`,
+      answer: `Sobald wir den Zahlungseingang bestätigt haben, erhalten Sie eine finale Bestätigung. Die Parzellen sind dann dauerhaft vergeben.`,
     },
     {
       question: "Wie lange ist meine Reservierung gültig?",
-      answer: `Ihre Reservierung ist 14 Tage gültig. Sollte innerhalb dieser Zeit keine Zahlung eingehen, werden die Parzellen wieder freigegeben und können von anderen Unterstützern erworben werden.`,
+      answer: `Ihre Reservierung ist 24 Stunden gültig. Sollte innerhalb dieser Zeit keine Zahlung eingehen, werden die Parzellen wieder freigegeben.`,
     },
     {
       question: "Kann ich meine Reservierung stornieren?",
@@ -232,11 +232,11 @@ function FAQSection() {
     },
     {
       question: "Erhalte ich eine Spendenquittung?",
-      answer: `Da es sich um einen Kauf und keine Spende handelt, kann leider keine Spendenquittung ausgestellt werden. Sie unterstützen den Verein jedoch direkt beim Ausbau der Spielstätte.`,
+      answer: `Eine Spendenquittung ist ab 300 € möglich. Bitte wählen Sie im Checkout die Option „Spendenquittung“ und geben Sie dafür Ihre Adresse an.`,
     },
     {
       question: "Wer ist der Ansprechpartner bei Fragen?",
-      answer: `Bei Fragen wenden Sie sich bitte an kontakt@sc-west-koeln.de oder besuchen Sie uns im Vereinsheim in der Apenrader Str. 42, 50825 Köln.`,
+      answer: `Bei Fragen wenden Sie sich bitte an kontakt@sc-west-koeln.de.`,
     },
   ];
 
