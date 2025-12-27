@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { sendPaidConfirmationEmail } from '@/lib/mailjet'
 import { confirmReservation, getReservation } from '@/lib/reservations'
 
 export const runtime = "nodejs"
@@ -45,6 +46,14 @@ export async function POST(request: NextRequest) {
         { error: 'Fehler beim Bestätigen der Reservierung' },
         { status: 500 }
       )
+    }
+
+    const updated = await getReservation(reservationId)
+    if (updated) {
+      const emailSent = await sendPaidConfirmationEmail(updated)
+      if (!emailSent) {
+        console.error('Failed to send paid confirmation email:', reservationId)
+      }
     }
 
     return NextResponse.json({

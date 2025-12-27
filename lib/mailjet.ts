@@ -10,6 +10,14 @@ function getMailjetClient() {
   });
 }
 
+function getFromEmail() {
+  return process.env.MAILJET_FROM_EMAIL || "spenden@sc-west-koeln.de";
+}
+
+function getReplyToEmail() {
+  return process.env.MAILJET_REPLY_TO_EMAIL || "L-Stange@sc-west-koeln.de";
+}
+
 interface ParcelSummary {
   type: string;
   count: number;
@@ -112,6 +120,7 @@ function generateEmailHtml(reservation: ReservationDTO): string {
           hour: "2-digit",
           minute: "2-digit",
         })}</p>
+        <p style="margin: 5px 0 0 0; color: #64648a;"><strong>Gültigkeit:</strong> 24 Stunden</p>
       </div>
       
       <h3 style="color: #262667; margin: 20px 0 15px 0; font-size: 16px;">Ihre Parzellen</h3>
@@ -138,8 +147,7 @@ function generateEmailHtml(reservation: ReservationDTO): string {
         <h3 style="color: #F7E816; margin: 0 0 15px 0; font-size: 16px;">Zahlungsinformationen</h3>
         <p style="color: #ffffff; margin: 0; line-height: 1.8;">
           <strong>Empfänger:</strong> SC West Köln 1900/11 e.V.<br>
-          <strong>IBAN:</strong> DE XX XXXX XXXX XXXX XXXX XX<br>
-          <strong>BIC:</strong> XXXXXXXX<br>
+          <strong>IBAN:</strong> DE46 3806 0185 4901 5910 62<br>
           <strong>Verwendungszweck:</strong> ${getPurposeText(reservation)}<br>
           <strong>Betrag:</strong> ${formatEuro(reservation.totalAmount)}
         </p>
@@ -147,7 +155,7 @@ function generateEmailHtml(reservation: ReservationDTO): string {
       
       <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #F7E816;">
         <p style="margin: 0; color: #856404; font-size: 14px;">
-          <strong>Wichtig:</strong> Bitte überweisen Sie den Betrag innerhalb von 14 Tagen. Nach Zahlungseingang werden Ihre Parzellen als verkauft markiert und Sie erhalten eine Bestätigung.
+          <strong>Wichtig:</strong> Bitte überweisen Sie den Betrag innerhalb von 24 Stunden. Nach Zahlungseingang erhalten Sie eine Bestätigung.
         </p>
       </div>
       
@@ -155,7 +163,7 @@ function generateEmailHtml(reservation: ReservationDTO): string {
       
       <p style="color: #64648a; font-size: 12px; line-height: 1.6;">
         Bei Fragen wenden Sie sich bitte an:<br>
-        <a href="mailto:kontakt@sc-west-koeln.de" style="color: #262667;">kontakt@sc-west-koeln.de</a><br><br>
+        <a href="mailto:${getReplyToEmail()}" style="color: #262667;">${getReplyToEmail()}</a><br><br>
         SC West Köln 1900/11 e.V.<br>
         Apenrader Str. 42<br>
         50825 Köln
@@ -192,6 +200,7 @@ RESERVIERUNGSDETAILS
 --------------------
 Reservierungsnummer: ${reservation.id}
 Datum: ${new Date(reservation.createdAt).toLocaleDateString("de-DE")}
+Gültigkeit: 24 Stunden
 
 IHRE PARZELLEN
 --------------
@@ -202,15 +211,14 @@ Gesamtbetrag: ${formatEuro(reservation.totalAmount)}
 ZAHLUNGSINFORMATIONEN
 ---------------------
 Empfänger: SC West Köln 1900/11 e.V.
-IBAN: DE XX XXXX XXXX XXXX XXXX XX
-BIC: XXXXXXXX
+IBAN: DE46 3806 0185 4901 5910 62
 Verwendungszweck: ${getPurposeText(reservation)}
 Betrag: ${formatEuro(reservation.totalAmount)}
 
-WICHTIG: Bitte überweisen Sie den Betrag innerhalb von 14 Tagen.
-Nach Zahlungseingang werden Ihre Parzellen als verkauft markiert.
+WICHTIG: Bitte überweisen Sie den Betrag innerhalb von 24 Stunden.
+Nach Zahlungseingang erhalten Sie eine Bestätigung.
 
-Bei Fragen: kontakt@sc-west-koeln.de
+Bei Fragen: ${getReplyToEmail()}
 
 SC West Köln 1900/11 e.V.
 Apenrader Str. 42
@@ -223,7 +231,7 @@ export async function sendReservationEmail(
   reservation: ReservationDTO
 ): Promise<boolean> {
   // Mock mode: log email instead of sending
-if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {
+  if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {
     console.log("\n[MOCK EMAIL] ========================================");
     console.log(`To: ${reservation.buyerName} <${reservation.buyerEmail}>`);
     console.log(
@@ -241,7 +249,11 @@ if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {
       Messages: [
         {
           From: {
-            Email: process.env.MAILJET_FROM_EMAIL || "noreply@sc-west-koeln.de",
+            Email: getFromEmail(),
+            Name: "SC West Köln",
+          },
+          ReplyTo: {
+            Email: getReplyToEmail(),
             Name: "SC West Köln",
           },
           To: [
@@ -259,6 +271,118 @@ if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {
     return true;
   } catch (error) {
     console.error("Failed to send email:", error);
+    return false;
+  }
+}
+
+function generatePaidEmailText(reservation: ReservationDTO): string {
+  const receiptLine = reservation.receiptRequested
+    ? "Wir stellen Ihnen gerne eine Spendenquittung aus."
+    : "Wenn Sie eine Spendenquittung benötigen, melden Sie sich bitte per E-Mail.";
+
+  return `
+SC West Köln - Spende bestätigt
+========================================
+
+Liebe/r ${reservation.buyerName},
+
+wir haben den Zahlungseingang für Ihre Spende bestätigt. Vielen Dank für Ihre Unterstützung!
+
+Reservierungsnummer: ${reservation.id}
+Betrag: ${formatEuro(reservation.totalAmount)}
+
+${receiptLine}
+
+Bei Fragen: ${getReplyToEmail()}
+
+SC West Köln 1900/11 e.V.
+www.sc-west-koeln.de
+  `.trim();
+}
+
+function generatePaidEmailHtml(reservation: ReservationDTO): string {
+  const receiptText = reservation.receiptRequested
+    ? "Wir stellen Ihnen gerne eine Spendenquittung aus."
+    : "Wenn Sie eine Spendenquittung benötigen, melden Sie sich bitte per E-Mail.";
+
+  return `
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f4f4f8;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #262667; padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+      <h1 style="color: #F7E816; margin: 0; font-size: 28px;">SC West Köln</h1>
+      <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Tradition. Veedel. Verein.</p>
+    </div>
+    <div style="background-color: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+      <h2 style="color: #262667; margin: 0 0 20px 0;">Spende bestätigt</h2>
+      <p style="color: #64648a; line-height: 1.6;">
+        Liebe/r ${reservation.buyerName},<br><br>
+        wir haben den Zahlungseingang für Ihre Spende bestätigt. Vielen Dank für Ihre Unterstützung!
+      </p>
+      <div style="background-color: #f8f8fc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #64648a;"><strong>Reservierungsnummer:</strong> ${reservation.id}</p>
+        <p style="margin: 5px 0 0 0; color: #64648a;"><strong>Betrag:</strong> ${formatEuro(reservation.totalAmount)}</p>
+      </div>
+      <p style="color: #64648a; line-height: 1.6;">${receiptText}</p>
+      <p style="color: #64648a; font-size: 12px; line-height: 1.6;">
+        Bei Fragen wenden Sie sich bitte an:<br>
+        <a href="mailto:${getReplyToEmail()}" style="color: #262667;">${getReplyToEmail()}</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+export async function sendPaidConfirmationEmail(
+  reservation: ReservationDTO
+): Promise<boolean> {
+  if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {
+    console.log("\n[MOCK EMAIL] ========================================");
+    console.log(`To: ${reservation.buyerName} <${reservation.buyerEmail}>`);
+    console.log(
+      `Subject: Spende bestätigt - Kunstrasen Aktion (${reservation.id})`
+    );
+    console.log("----------------------------------------");
+    console.log(generatePaidEmailText(reservation));
+    console.log("========================================\n");
+    return true;
+  }
+
+  try {
+    const mailjet = getMailjetClient();
+    await mailjet.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: {
+            Email: getFromEmail(),
+            Name: "SC West Köln",
+          },
+          ReplyTo: {
+            Email: getReplyToEmail(),
+            Name: "SC West Köln",
+          },
+          To: [
+            {
+              Email: reservation.buyerEmail,
+              Name: reservation.buyerName,
+            },
+          ],
+          Subject: `Spende bestätigt - Kunstrasen Aktion (${reservation.id})`,
+          TextPart: generatePaidEmailText(reservation),
+          HTMLPart: generatePaidEmailHtml(reservation),
+        },
+      ],
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send paid confirmation email:", error);
     return false;
   }
 }
