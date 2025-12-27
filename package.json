@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
+    "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@vercel/kv": "^3.0.0",
     "class-variance-authority": "^0.7.1",
@@ -21,6 +22,7 @@
     "lucide-react": "^0.562.0",
     "next": "^16.1.0",
     "node-mailjet": "^6.0.11",
+    "pg": "^8.16.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "shadcn": "^3.6.2",
@@ -31,6 +33,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
