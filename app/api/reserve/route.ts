@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { 
-  areParcelsAvailable, 
-  createReservation, 
-  calculateTotal,
-  type Reservation 
-} from '@/lib/kv'
+import { calculateTotal } from '@/lib/parcels'
 import { sendReservationEmail } from '@/lib/mailjet'
 import { generateReservationId } from '@/lib/utils'
+import { createReservation, expireReservations } from '@/lib/reservations'
+
+export const runtime = "nodejs"
 
 const reserveSchema = z.object({
   parcels: z.array(z.string()).min(1, 'Bitte wählen Sie mindestens eine Parzelle aus'),
@@ -23,16 +21,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = reserveSchema.parse(body)
 
-    const available = await areParcelsAvailable(validatedData.parcels)
-    if (!available) {
-      return NextResponse.json(
-        { error: 'Einige der ausgewählten Parzellen sind nicht mehr verfügbar. Bitte aktualisieren Sie die Seite.' },
-        { status: 409 }
-      )
-    }
-
     const totalAmount = calculateTotal(validatedData.parcels)
-    const reservation: Reservation = {
+    const reservationInput = {
       id: generateReservationId(),
       parcels: validatedData.parcels,
       buyerName: validatedData.buyerName,
@@ -41,11 +31,10 @@ export async function POST(request: NextRequest) {
       buyerCity: validatedData.buyerCity,
       buyerZip: validatedData.buyerZip,
       totalAmount,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
     }
 
-    await createReservation(reservation)
+    await expireReservations()
+    const reservation = await createReservation(reservationInput)
 
     const emailSent = await sendReservationEmail(reservation)
     if (!emailSent) {
@@ -58,6 +47,13 @@ export async function POST(request: NextRequest) {
       totalAmount,
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'PARCEL_NOT_AVAILABLE') {
+      return NextResponse.json(
+        { error: 'Einige der ausgewählten Parzellen sind nicht mehr verfügbar. Bitte aktualisieren Sie die Seite.' },
+        { status: 409 }
+      )
+    }
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },
@@ -72,4 +68,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

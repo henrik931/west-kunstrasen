@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useParcelContext } from '@/lib/parcel-context'
 import { formatEuro } from '@/lib/utils'
-import { getParcelById, FIELD_CONFIG } from '@/lib/kv'
+import { getParcelById } from '@/lib/parcels'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -52,7 +52,7 @@ function groupSelectedParcels(ids: Set<string>): ParcelGroup[] {
 }
 
 export function ShoppingCart() {
-  const { selectedParcels, getTotal, clearSelection, deselectParcel } = useParcelContext()
+  const { selectedParcels, getTotal, clearSelection, deselectParcel, refreshStatuses } = useParcelContext()
   const [isOpen, setIsOpen] = useState(false)
   const [isCheckout, setIsCheckout] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -99,6 +99,7 @@ export function ShoppingCart() {
       setIsSuccess(true)
       clearSelection()
       setFormData({ name: '', email: '', address: '', city: '', zip: '' })
+      await refreshStatuses()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten')
     } finally {
@@ -313,4 +314,3 @@ export function ShoppingCart() {
     </Dialog>
   )
 }
-

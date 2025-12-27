@@ -1,5 +1,6 @@
 import Mailjet from "node-mailjet";
-import { Reservation, getParcelById } from "./kv";
+import { getParcelById } from "./parcels";
+import type { ReservationDTO } from "./types";
 import { formatEuro } from "./utils";
 
 function getMailjetClient() {
@@ -46,7 +47,7 @@ function groupParcelsByType(parcelIds: string[]): ParcelSummary[] {
   return Object.values(groups);
 }
 
-function generateEmailHtml(reservation: Reservation): string {
+function generateEmailHtml(reservation: ReservationDTO): string {
   const parcelSummary = groupParcelsByType(reservation.parcels);
 
   const parcelRows = parcelSummary
@@ -162,7 +163,7 @@ function generateEmailHtml(reservation: Reservation): string {
   `;
 }
 
-function generateEmailText(reservation: Reservation): string {
+function generateEmailText(reservation: ReservationDTO): string {
   const parcelSummary = groupParcelsByType(reservation.parcels);
 
   const parcelList = parcelSummary
@@ -211,7 +212,7 @@ www.sc-west-koeln.de
 }
 
 export async function sendReservationEmail(
-  reservation: Reservation
+  reservation: ReservationDTO
 ): Promise<boolean> {
   // Mock mode: log email instead of sending
 if (!process.env.MAILJET_API_KEY || !process.env.MAILJET_SECRET_KEY) {

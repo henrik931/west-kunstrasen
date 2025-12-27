@@ -1,7 +1,7 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import { FIELD_CONFIG, getParcelById } from './kv'
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react'
+import { getParcelById } from './parcels'
 
 interface ParcelContextType {
   selectedParcels: Set<string>
@@ -17,6 +17,7 @@ interface ParcelContextType {
   getSelectedCount: () => number
   setSoldParcels: (parcels: string[]) => void
   setReservedParcels: (parcels: string[]) => void
+  refreshStatuses: () => Promise<void>
 }
 
 const ParcelContext = createContext<ParcelContextType | null>(null)
@@ -88,6 +89,30 @@ export function ParcelProvider({ children }: { children: ReactNode }) {
     setReservedParcelsState(new Set(parcels))
   }, [])
 
+  const refreshStatuses = useCallback(async () => {
+    try {
+      const response = await fetch('/api/parcels/status', {
+        cache: 'no-store',
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch parcel status')
+      }
+      const data = await response.json()
+      setSoldParcelsState(new Set(data.sold))
+      setReservedParcelsState(new Set(data.reserved))
+    } catch (error) {
+      console.error('Failed to refresh parcel status:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshStatuses()
+    const interval = setInterval(() => {
+      void refreshStatuses()
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [refreshStatuses])
+
   return (
     <ParcelContext.Provider
       value={{
@@ -104,6 +129,7 @@ export function ParcelProvider({ children }: { children: ReactNode }) {
         getSelectedCount,
         setSoldParcels,
         setReservedParcels,
+        refreshStatuses,
       }}
     >
       {children}
@@ -118,4 +144,3 @@ export function useParcelContext() {
   }
   return context
 }
-

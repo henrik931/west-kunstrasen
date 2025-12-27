@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { SoccerField } from "@/components/soccer-field";
 import { ShoppingCart } from "@/components/shopping-cart";
-import { ParcelProvider, useParcelContext } from "@/lib/parcel-context";
+import { ParcelProvider } from "@/lib/parcel-context";
 import {
   Accordion,
   AccordionItem,
@@ -15,31 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatEuro } from "@/lib/utils";
-import { FIELD_CONFIG } from "@/lib/kv";
-
-function ParcelStatusLoader() {
-  const { setSoldParcels, setReservedParcels } = useParcelContext();
-
-  useEffect(() => {
-    async function loadStatus() {
-      try {
-        const response = await fetch("/api/parcels/status");
-        if (response.ok) {
-          const data = await response.json();
-          setSoldParcels(data.sold || []);
-          setReservedParcels(data.reserved || []);
-        }
-      } catch (error) {
-        console.error("Failed to load parcel status:", error);
-      }
-    }
-    loadStatus();
-    const interval = setInterval(loadStatus, 30000);
-    return () => clearInterval(interval);
-  }, [setSoldParcels, setReservedParcels]);
-
-  return null;
-}
+import { FIELD_CONFIG } from "@/lib/parcels";
 
 function Header() {
   return (
@@ -372,7 +347,6 @@ function Footer() {
 export default function HomePage() {
   return (
     <ParcelProvider>
-      <ParcelStatusLoader />
       <div className="min-h-screen bg-sc-navy text-white">
         <Header />
         <main>

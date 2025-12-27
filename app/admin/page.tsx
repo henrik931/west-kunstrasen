@@ -6,18 +6,19 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { formatEuro } from '@/lib/utils'
-import { type Reservation } from '@/lib/kv'
+import { type ReservationDTO } from '@/lib/types'
 import { Check, X, Loader2, Lock, RefreshCw, LogOut } from 'lucide-react'
 
-type ReservationWithDetails = Reservation
+type ReservationWithDetails = ReservationDTO
 
 export default function AdminPage() {
-  const [password, setPassword] = useState('')
+  const [token, setToken] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [reservations, setReservations] = useState<ReservationWithDetails[]>([])
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [isExpiring, setIsExpiring] = useState(false)
 
   const fetchReservations = useCallback(async () => {
     setIsLoading(true)
@@ -26,13 +27,13 @@ export default function AdminPage() {
     try {
       const response = await fetch('/api/admin/reservations', {
         headers: {
-          'x-admin-password': password,
+          Authorization: `Bearer ${token}`,
         },
       })
 
       if (response.status === 401) {
         setIsAuthenticated(false)
-        setError('Ungültiges Passwort')
+        setError('Ungültiges Token')
         return
       }
 
@@ -48,7 +49,7 @@ export default function AdminPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [password])
+  }, [token])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,7 +63,7 @@ export default function AdminPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-password': password,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ reservationId }),
       })
@@ -89,7 +90,7 @@ export default function AdminPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-password': password,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ reservationId }),
       })
@@ -109,27 +110,55 @@ export default function AdminPage() {
 
   const handleLogout = () => {
     setIsAuthenticated(false)
-    setPassword('')
+    setToken('')
     setReservations([])
   }
 
-  const getStatusBadge = (status: Reservation['status']) => {
+  const handleExpire = async () => {
+    setIsExpiring(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/admin/expire', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Fehler beim Bereinigen')
+      }
+
+      await fetchReservations()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten')
+    } finally {
+      setIsExpiring(false)
+    }
+  }
+
+  const getStatusBadge = (status: ReservationDTO['status']) => {
     switch (status) {
       case 'pending':
         return <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Ausstehend</Badge>
-      case 'confirmed':
-        return <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/30">Bestätigt</Badge>
+      case 'paid':
+        return <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/30">Bezahlt</Badge>
+      case 'expired':
+        return <Badge variant="outline" className="bg-slate-500/20 text-slate-300 border-slate-400/30">Abgelaufen</Badge>
       case 'cancelled':
         return <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">Storniert</Badge>
     }
   }
 
   const pendingReservations = reservations.filter(r => r.status === 'pending')
-  const confirmedReservations = reservations.filter(r => r.status === 'confirmed')
+  const paidReservations = reservations.filter(r => r.status === 'paid')
+  const expiredReservations = reservations.filter(r => r.status === 'expired')
   const cancelledReservations = reservations.filter(r => r.status === 'cancelled')
 
   const totalPending = pendingReservations.reduce((sum, r) => sum + r.totalAmount, 0)
-  const totalConfirmed = confirmedReservations.reduce((sum, r) => sum + r.totalAmount, 0)
+  const totalPaid = paidReservations.reduce((sum, r) => sum + r.totalAmount, 0)
 
   if (!isAuthenticated) {
     return (
@@ -147,9 +176,9 @@ export default function AdminPage() {
             <div>
               <Input
                 type="password"
-                placeholder="Admin-Passwort"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Admin-Token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
                 className="bg-white/10 border-white/20"
               />
             </div>
@@ -162,7 +191,7 @@ export default function AdminPage() {
 
             <Button 
               type="submit" 
-              disabled={isLoading || !password}
+              disabled={isLoading || !token}
               className="w-full bg-sc-yellow text-sc-navy hover:bg-sc-yellow/90"
             >
               {isLoading ? (
@@ -199,6 +228,16 @@ export default function AdminPage() {
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Aktualisieren
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExpire}
+              disabled={isExpiring}
+              className="border-white/20"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isExpiring ? 'animate-spin' : ''}`} />
+              Abgelaufene bereinigen
+            </Button>
             <Button 
               variant="ghost" 
               size="sm"
@@ -214,20 +253,24 @@ export default function AdminPage() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <p className="text-sm text-white/60">Ausstehend</p>
             <p className="text-2xl font-bold text-yellow-400">{pendingReservations.length}</p>
             <p className="text-sm text-white/40">{formatEuro(totalPending)}</p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <p className="text-sm text-white/60">Bestätigt</p>
-            <p className="text-2xl font-bold text-green-400">{confirmedReservations.length}</p>
-            <p className="text-sm text-white/40">{formatEuro(totalConfirmed)}</p>
+            <p className="text-sm text-white/60">Bezahlt</p>
+            <p className="text-2xl font-bold text-green-400">{paidReservations.length}</p>
+            <p className="text-sm text-white/40">{formatEuro(totalPaid)}</p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <p className="text-sm text-white/60">Storniert</p>
             <p className="text-2xl font-bold text-red-400">{cancelledReservations.length}</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <p className="text-sm text-white/60">Abgelaufen</p>
+            <p className="text-2xl font-bold text-slate-300">{expiredReservations.length}</p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <p className="text-sm text-white/60">Gesamt</p>
@@ -264,14 +307,32 @@ export default function AdminPage() {
         )}
 
         {/* Confirmed Reservations */}
-        {confirmedReservations.length > 0 && (
+        {paidReservations.length > 0 && (
           <section className="mb-8">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <span className="w-3 h-3 bg-green-400 rounded-full" />
-              Bestätigte Reservierungen
+              Bezahlte Reservierungen
             </h2>
             <div className="space-y-4">
-              {confirmedReservations.map((reservation) => (
+              {paidReservations.map((reservation) => (
+                <ReservationCard
+                  key={reservation.id}
+                  reservation={reservation}
+                  getStatusBadge={getStatusBadge}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {expiredReservations.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span className="w-3 h-3 bg-slate-300 rounded-full" />
+              Abgelaufene Reservierungen
+            </h2>
+            <div className="space-y-4 opacity-70">
+              {expiredReservations.map((reservation) => (
                 <ReservationCard
                   key={reservation.id}
                   reservation={reservation}
@@ -322,7 +383,7 @@ function ReservationCard({
   onConfirm?: (id: string) => void
   onCancel?: (id: string) => void
   isLoading?: boolean
-  getStatusBadge: (status: Reservation['status']) => React.ReactNode
+  getStatusBadge: (status: ReservationDTO['status']) => React.ReactNode
 }) {
   const parcelCounts = reservation.parcels.reduce((acc, id) => {
     if (id.startsWith('goal-')) acc.goal++
@@ -419,9 +480,9 @@ function ReservationCard({
         </div>
       )}
 
-      {reservation.status === 'confirmed' && reservation.confirmedAt && (
+      {reservation.status === 'paid' && reservation.paidAt && (
         <p className="text-sm text-green-400">
-          Bestätigt am {new Date(reservation.confirmedAt).toLocaleDateString('de-DE', {
+          Bezahlt am {new Date(reservation.paidAt).toLocaleDateString('de-DE', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -433,4 +494,3 @@ function ReservationCard({
     </div>
   )
 }
-

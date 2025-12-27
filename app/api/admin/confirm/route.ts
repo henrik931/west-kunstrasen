@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { confirmReservation, getReservation } from '@/lib/kv'
+import { confirmReservation, getReservation } from '@/lib/reservations'
+
+export const runtime = "nodejs"
 
 const confirmSchema = z.object({
   reservationId: z.string().min(1),
 })
 
 export async function POST(request: NextRequest) {
-  const adminPassword = request.headers.get('x-admin-password')
-  
-  if (adminPassword !== process.env.ADMIN_PASSWORD) {
+  const authHeader = request.headers.get('authorization')
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  if (!token || token !== process.env.ADMIN_TOKEN) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -63,4 +66,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useCallback } from 'react'
 import { useParcelContext } from '@/lib/parcel-context'
-import { FIELD_CONFIG } from '@/lib/kv'
+import { FIELD_CONFIG } from '@/lib/parcels'
 import { cn } from '@/lib/utils'
 
 const VIEWBOX_WIDTH = 1050
