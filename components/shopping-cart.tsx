@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useParcelContext } from '@/lib/parcel-context'
 import { formatEuro } from '@/lib/utils'
-import { getParcelById } from '@/lib/parcels'
+import { getParcelById, FIELD_CONFIG } from '@/lib/parcels'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
