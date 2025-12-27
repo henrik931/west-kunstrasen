@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { expireReservations, getAllReservations } from '@/lib/reservations'
+import { expireReservations, getReservationsFiltered, type ReservationFilters } from '@/lib/reservations'
 
 export const runtime = "nodejs"
 
@@ -16,7 +16,23 @@ export async function GET(request: NextRequest) {
 
   try {
     await expireReservations()
-    const reservations = await getAllReservations()
+    const { searchParams } = new URL(request.url)
+    const statusRaw = searchParams.get('status') || undefined
+    const q = searchParams.get('q') || undefined
+    const from = searchParams.get('from') || undefined
+    const to = searchParams.get('to') || undefined
+
+    const allowedStatuses = new Set(['pending', 'paid', 'expired', 'cancelled'])
+    const status = statusRaw && allowedStatuses.has(statusRaw) ? statusRaw : undefined
+
+    const filters: ReservationFilters = {
+      status: status as ReservationFilters['status'],
+      q,
+      from,
+      to,
+    }
+
+    const reservations = await getReservationsFiltered(filters)
     const statusOrder = {
       pending: 0,
       paid: 1,

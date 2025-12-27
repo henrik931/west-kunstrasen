@@ -12,6 +12,13 @@ const STATUS_MAP: Record<PrismaReservationStatus, ReservationStatus> = {
   CANCELLED: "cancelled",
 };
 
+const REVERSE_STATUS_MAP: Record<ReservationStatus, PrismaReservationStatus> = {
+  pending: "PENDING",
+  paid: "PAID",
+  expired: "EXPIRED",
+  cancelled: "CANCELLED",
+};
+
 
 function toReservationDTO(reservation: {
   id: string;
@@ -184,7 +191,58 @@ export async function getReservation(id: string): Promise<ReservationDTO | null>
 }
 
 export async function getAllReservations(): Promise<ReservationDTO[]> {
+  return getReservationsFiltered({});
+}
+
+export interface ReservationFilters {
+  status?: ReservationStatus;
+  q?: string;
+  from?: string;
+  to?: string;
+}
+
+export async function getReservationsFiltered(
+  filters: ReservationFilters
+): Promise<ReservationDTO[]> {
+  const where: Prisma.ReservationWhereInput = {};
+
+  if (filters.status) {
+    where.status = REVERSE_STATUS_MAP[filters.status];
+  }
+
+  if (filters.from || filters.to) {
+    where.createdAt = {};
+    if (filters.from) {
+      where.createdAt.gte = new Date(filters.from);
+    }
+    if (filters.to) {
+      const toDate = new Date(filters.to);
+      toDate.setHours(23, 59, 59, 999);
+      where.createdAt.lte = toDate;
+    }
+  }
+
+  if (filters.q) {
+    const query = filters.q.trim();
+    if (query.length > 0) {
+      const orConditions: Prisma.ReservationWhereInput[] = [
+        { id: { contains: query, mode: "insensitive" } },
+        { buyerName: { contains: query, mode: "insensitive" } },
+        { buyerEmail: { contains: query, mode: "insensitive" } },
+        { donorName: { contains: query, mode: "insensitive" } },
+      ];
+
+      const amount = Number(query.replace(",", "."));
+      if (!Number.isNaN(amount)) {
+        orConditions.push({ totalCents: Math.round(amount * 100) });
+      }
+
+      where.OR = orConditions;
+    }
+  }
+
   const reservations = await prisma.reservation.findMany({
+    where,
     orderBy: { createdAt: "desc" },
     include: { items: { select: { parcelId: true } } },
   });

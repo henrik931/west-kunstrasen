@@ -19,13 +19,28 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [isExpiring, setIsExpiring] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | ReservationDTO['status']>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
+
+  const buildQueryParams = useCallback(() => {
+    const params = new URLSearchParams()
+    if (statusFilter !== 'all') params.set('status', statusFilter)
+    if (searchQuery.trim()) params.set('q', searchQuery.trim())
+    if (fromDate) params.set('from', fromDate)
+    if (toDate) params.set('to', toDate)
+    const queryString = params.toString()
+    return queryString ? `?${queryString}` : ''
+  }, [statusFilter, searchQuery, fromDate, toDate])
 
   const fetchReservations = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch('/api/admin/reservations', {
+      const response = await fetch(`/api/admin/reservations${buildQueryParams()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -49,12 +64,18 @@ export default function AdminPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [token])
+  }, [token, buildQueryParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     await fetchReservations()
   }
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void fetchReservations()
+    }
+  }, [statusFilter, isAuthenticated, fetchReservations])
 
   const handleConfirm = async (reservationId: string) => {
     setActionLoading(reservationId)
@@ -136,6 +157,37 @@ export default function AdminPage() {
       setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten')
     } finally {
       setIsExpiring(false)
+    }
+  }
+
+  const handleExportCsv = async () => {
+    setIsExporting(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/admin/reservations.csv${buildQueryParams()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Fehler beim CSV-Export')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'reservations.csv'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten')
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -252,6 +304,77 @@ export default function AdminPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Input
+              placeholder="Suche nach Name, E-Mail, ID, Betrag"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-white/10 border-white/20"
+            />
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="bg-white/10 border-white/20"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="bg-white/10 border-white/20"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={fetchReservations}
+                disabled={isLoading}
+                className="border-white/20 w-full"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Lädt...
+                  </>
+                ) : (
+                  'Filter anwenden'
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExportCsv}
+                disabled={isExporting}
+                className="border-white/20 w-full"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    CSV...
+                  </>
+                ) : (
+                  'CSV Export'
+                )}
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-4">
+            {(['all', 'pending', 'paid', 'expired', 'cancelled'] as const).map((status) => (
+              <Button
+                key={status}
+                size="sm"
+                variant={statusFilter === status ? 'default' : 'outline'}
+                onClick={() => setStatusFilter(status)}
+                className={statusFilter === status ? 'bg-sc-yellow text-sc-navy' : 'border-white/20'}
+              >
+                {status === 'all' && 'Alle'}
+                {status === 'pending' && 'Ausstehend'}
+                {status === 'paid' && 'Bezahlt'}
+                {status === 'expired' && 'Abgelaufen'}
+                {status === 'cancelled' && 'Storniert'}
+              </Button>
+            ))}
+          </div>
+        </div>
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
