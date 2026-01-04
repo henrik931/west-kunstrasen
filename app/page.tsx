@@ -45,6 +45,13 @@ function Header() {
         </Link>
         <nav className="hidden md:flex items-center gap-6">
           <a
+            href="https://www.sc-west-koeln.de/"
+            target="_blank"
+            className="text-sm hover:text-sc-yellow transition-colors"
+          >
+            zurück zum SC West
+          </a>
+          <a
             href="#feld"
             className="text-sm hover:text-sc-yellow transition-colors"
           >
