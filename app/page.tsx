@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { SoccerField } from "@/components/soccer-field";
 import { ShoppingCart } from "@/components/shopping-cart";
-import { ParcelProvider } from "@/lib/parcel-context";
+import { ParcelProvider, useParcelContext } from "@/lib/parcel-context";
 import {
   Accordion,
   AccordionItem,
@@ -15,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatEuro } from "@/lib/utils";
-import { FIELD_CONFIG } from "@/lib/parcels";
+import { FIELD_CONFIG, type ParcelType } from "@/lib/parcels";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 function Header() {
   return (
@@ -26,12 +28,12 @@ function Header() {
           target="_blank"
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
-          <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-white flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full overflow-hidden border border-white/10 bg-white flex items-center justify-center">
             <Image
               src="/scwestlogo.png"
               alt="SC West Köln Logo"
-              width={64}
-              height={64}
+              width={80}
+              height={80}
               className="object-contain"
               priority
             />
@@ -88,10 +90,10 @@ function Hero() {
       <div className="container mx-auto px-4 relative">
         <div className="max-w-3xl mx-auto text-center">
           <Badge className="mb-6 bg-sc-yellow/20 text-sc-yellow border-sc-yellow/30">
-            Kunstrasen Aktion 2025
+            Kunstrasen-Projekt 2026
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-            Werde Teil von
+            Werde Teil vom
             <br />
             <span className="text-sc-yellow">SC West Köln</span>
           </h1>
@@ -128,29 +130,63 @@ function Hero() {
 }
 
 function PriceSection() {
+  const [availability, setAvailability] = useState<Record<ParcelType, number> | null>(null);
+
+  const loadAvailability = useCallback(async () => {
+    try {
+      const response = await fetch("/api/parcels/summary", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data?.available) {
+        setAvailability(data.available as Record<ParcelType, number>);
+      }
+    } catch (error) {
+      console.error("Failed to load availability summary:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAvailability();
+    const interval = window.setInterval(() => {
+      void loadAvailability();
+    }, 20000);
+    const handleRefresh = () => {
+      void loadAvailability();
+    };
+    window.addEventListener("parcels:summary:refresh", handleRefresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("parcels:summary:refresh", handleRefresh);
+    };
+  }, [loadAvailability]);
+
   const prices = [
     {
+      type: "goal" as ParcelType,
       name: "Tor-Parzelle",
       price: FIELD_CONFIG.PRICES.goal,
       description: "5 Parzellen pro Tor",
       highlight: true,
     },
     {
+      type: "penalty" as ParcelType,
       name: "Elfmeterpunkt",
       price: FIELD_CONFIG.PRICES.penalty,
-      description: "2 verfügbar",
+      description: "Im Strafraum",
       highlight: true,
     },
     {
+      type: "kickoff" as ParcelType,
       name: "Anstoßpunkt",
       price: FIELD_CONFIG.PRICES.kickoff,
       description: "Einzigartig",
       highlight: true,
     },
     {
+      type: "field" as ParcelType,
       name: "Feld-Parzelle",
       price: FIELD_CONFIG.PRICES.field,
-      description: "3.000 verfügbar",
+      description: "Rasterfläche",
       highlight: false,
     },
   ];
@@ -174,8 +210,35 @@ function PriceSection() {
               </p>
               <p className="font-medium mb-1">{item.name}</p>
               <p className="text-sm text-white/50">{item.description}</p>
+              <div className="mt-3 flex justify-center">
+                <Badge variant="secondary" className="bg-white/10 text-white/80">
+                  Verfügbar: {availability ? availability[item.type] ?? 0 : "—"}
+                </Badge>
+              </div>
             </div>
           ))}
+        </div>
+        <div className="max-w-5xl mx-auto mt-6">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-xl md:text-2xl font-bold text-sc-yellow mb-2">Bandenwerbung</p>
+              <p className="text-sm text-white/60">
+                Bandenwerbung (5 Jahre, Montage inkl.) – bitte Kontakt aufnehmen.
+              </p>
+            </div>
+            <div className="flex flex-col items-start md:items-end gap-3">
+              <p className="text-2xl md:text-3xl font-bold text-sc-yellow">ab 1.800 €</p>
+              <Button
+                onClick={() => {
+                  window.location.href = "mailto:kontakt@sc-west-koeln.de";
+                }}
+                variant="outline"
+                className="border-white/20 hover:bg-white/10"
+              >
+                Kontakt aufnehmen
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -183,6 +246,14 @@ function PriceSection() {
 }
 
 function FieldSection() {
+  const { selectedParcels, getTotal } = useParcelContext();
+  const total = getTotal();
+  const hasSelection = selectedParcels.size > 0;
+
+  const handleOpenCart = () => {
+    window.dispatchEvent(new Event("cart:open"));
+  };
+
   return (
     <section
       id="feld"
@@ -192,16 +263,23 @@ function FieldSection() {
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-4">Wähle deine Parzellen</h2>
           <p className="text-white/60 max-w-xl mx-auto">
-            Klicke auf das Spielfeld, um Parzellen auszuwählen. Zoome hinein für
-            Details.
-            <span className="hidden md:inline">
-              {" "}
-              Halte Shift + Mausklick gedrückt, um zu verschieben.
-            </span>
+            Klicke auf das Spielfeld, um Parzellen auszuwählen.
           </p>
         </div>
         <div className="max-w-5xl mx-auto">
           <SoccerField />
+        </div>
+        <div className="mt-6 flex justify-center">
+          <Button
+            onClick={handleOpenCart}
+            disabled={!hasSelection}
+            size="lg"
+            className="w-full max-w-2xl text-lg md:text-xl py-7 rounded-2xl shadow-2xl bg-sc-yellow text-sc-navy hover:bg-sc-yellow/90 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {hasSelection
+              ? `Jetzt reservieren – ${formatEuro(total)}`
+              : "Parzellen auswählen"}
+          </Button>
         </div>
       </div>
     </section>
@@ -211,24 +289,24 @@ function FieldSection() {
 function FAQSection() {
   const faqs = [
     {
-      question: "Wie funktioniert die Zahlung?",
+      question: "Wie funktioniert die Spende?",
       answer: `Nach der Reservierung erhalten Sie eine E-Mail mit allen Zahlungsinformationen. Die Spende erfolgt per Banküberweisung. Bitte verwenden Sie unbedingt den angegebenen Verwendungszweck, damit wir Ihre Spende zuordnen können.`,
     },
     {
       question: "Welche Bankverbindung gilt für die Überweisung?",
-      answer: `Empfänger: SC West Köln 1900/11 e.V. IBAN: DE46 3806 0185 4901 5910 62. Verwendungszweck: Kunstrasen {Reservierungs-ID} - {Name auf Spendertafel bzw. Anonym}.`,
+      answer: `Empfänger: SC West Köln 1900/11 e.V. IBAN: DE46 3806 0185 4901 5910 62. Verwendungszweck: Spende Kunstrasen {Reservierungs-ID} | {Name auf Spendertafel bzw. Anonym}.`,
     },
     {
-      question: "Was passiert nach der Zahlung?",
-      answer: `Sobald wir den Zahlungseingang bestätigt haben, erhalten Sie eine finale Bestätigung. Die Parzellen sind dann dauerhaft vergeben.`,
+      question: "Was passiert nach der Spende?",
+      answer: `Sobald wir den Spendeneingang bestätigt haben, erhalten Sie eine finale Bestätigung. Die Parzellen sind dann dauerhaft vergeben.`,
     },
     {
       question: "Wie lange ist meine Reservierung gültig?",
-      answer: `Ihre Reservierung ist 24 Stunden gültig. Sollte innerhalb dieser Zeit keine Zahlung eingehen, werden die Parzellen wieder freigegeben.`,
+      answer: `Ihre Reservierung ist 24 Stunden gültig. Sollte innerhalb dieser Zeit keine Spende eingehen, werden die Parzellen wieder freigegeben.`,
     },
     {
       question: "Kann ich meine Reservierung stornieren?",
-      answer: `Ja, eine Stornierung ist möglich, solange noch keine Zahlung erfolgt ist. Kontaktieren Sie uns dazu bitte per E-Mail an kontakt@sc-west-koeln.de.`,
+      answer: `Ja, eine Stornierung ist möglich, solange noch keine Spende erfolgt ist. Kontaktieren Sie uns dazu bitte per E-Mail an kontakt@sc-west-koeln.de.`,
     },
     {
       question: "Erhalte ich eine Spendenquittung?",
@@ -273,8 +351,14 @@ function Footer() {
         <div className="grid md:grid-cols-3 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-sc-yellow rounded-full flex items-center justify-center">
-                <span className="font-bold text-sc-navy text-sm">SCW</span>
+              <div className="w-20 h-20 rounded-full overflow-hidden border border-white/10 bg-white flex items-center justify-center">
+                <Image
+                  src="/scwestlogo.png"
+                  alt="SC West Köln Logo"
+                  width={80}
+                  height={80}
+                  className="object-contain"
+                />
               </div>
               <div>
                 <h3 className="font-bold">SC West Köln</h3>
@@ -334,7 +418,7 @@ function Footer() {
 
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
           <p>
-            © {new Date().getFullYear()} SC West Köln 1900/11 e.V. Alle Rechte
+            © 2026 SC West Köln 1900/11 e.V. Alle Rechte
             vorbehalten.
           </p>
           <p>
@@ -353,6 +437,33 @@ function Footer() {
 }
 
 export default function HomePage() {
+  const [showFloating, setShowFloating] = useState(false);
+  const [floatingDirection, setFloatingDirection] = useState<"up" | "down">("down");
+
+  useEffect(() => {
+    const target = document.getElementById("feld");
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const shouldShow = !entry.isIntersecting;
+        setShowFloating(shouldShow);
+        if (shouldShow) {
+          const rectTop = entry.boundingClientRect.top;
+          setFloatingDirection(rectTop < 0 ? "up" : "down");
+        }
+      },
+      { root: null, threshold: 0.2 }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleScrollToField = () => {
+    const target = document.getElementById("feld");
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <ParcelProvider>
       <div className="min-h-screen bg-sc-navy text-white">
@@ -365,6 +476,19 @@ export default function HomePage() {
         </main>
         <Footer />
         <ShoppingCart />
+        {showFloating && (
+          <Button
+            onClick={handleScrollToField}
+            className="fixed right-6 bottom-24 z-50 bg-sc-yellow text-sc-navy hover:bg-sc-yellow/90 font-semibold shadow-xl gap-2"
+          >
+            Hier spenden
+            {floatingDirection === "up" ? (
+              <ArrowUp className="w-4 h-4" />
+            ) : (
+              <ArrowDown className="w-4 h-4" />
+            )}
+          </Button>
+        )}
       </div>
     </ParcelProvider>
   );

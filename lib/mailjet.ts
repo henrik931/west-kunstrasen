@@ -60,7 +60,7 @@ function getPurposeText(reservation: ReservationDTO) {
     reservation.anonymous || !reservation.donorName
       ? "Anonym"
       : reservation.donorName;
-  return `Kunstrasen ${reservation.id} - ${donor}`;
+  return `Spende Kunstrasen ${reservation.id} | ${donor}`;
 }
 
 function generateEmailHtml(reservation: ReservationDTO): string {

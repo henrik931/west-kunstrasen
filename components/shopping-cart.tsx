@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { ShoppingCart as CartIcon, Trash2, X, Check, Loader2 } from 'lucide-react'
+import { ShoppingCart as CartIcon, Trash2, Check, Loader2 } from 'lucide-react'
 
 interface ParcelGroup {
   type: string
@@ -54,9 +54,8 @@ function groupSelectedParcels(ids: Set<string>): ParcelGroup[] {
 export function ShoppingCart() {
   const { selectedParcels, getTotal, clearSelection, deselectParcel, refreshStatuses } = useParcelContext()
   const [isOpen, setIsOpen] = useState(false)
-  const [isCheckout, setIsCheckout] = useState(false)
+  const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successReservationId, setSuccessReservationId] = useState<string | null>(null)
   const [successDonorName, setSuccessDonorName] = useState<string | null>(null)
@@ -83,6 +82,14 @@ export function ShoppingCart() {
       setFormData(prev => ({ ...prev, receiptRequested: false }))
     }
   }, [canRequestReceipt, formData.receiptRequested])
+
+  useEffect(() => {
+    const handleOpen = () => {
+      setIsOpen(true)
+    }
+    window.addEventListener('cart:open', handleOpen)
+    return () => window.removeEventListener('cart:open', handleOpen)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,7 +119,8 @@ export function ShoppingCart() {
         throw new Error(data.error || 'Ein Fehler ist aufgetreten')
       }
 
-      setIsSuccess(true)
+      setStep('success')
+      window.dispatchEvent(new Event('parcels:summary:refresh'))
       setSuccessReservationId(data.reservationId)
       setSuccessAnonymous(formData.anonymous)
       setSuccessDonorName(formData.anonymous ? null : formData.donorName.trim())
@@ -136,13 +144,22 @@ export function ShoppingCart() {
   }
 
   const resetState = () => {
-    setIsCheckout(false)
-    setIsSuccess(false)
+    setStep('cart')
     setError(null)
     setSuccessReservationId(null)
     setSuccessDonorName(null)
     setSuccessAnonymous(false)
   }
+
+  const handleBackToField = () => {
+    setIsOpen(false)
+    resetState()
+    document.getElementById('feld')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const purposeText = `Spende Kunstrasen ${successReservationId ?? '—'} | ${
+    successAnonymous || !successDonorName ? 'Anonym' : successDonorName
+  }`
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetState() }}>
@@ -166,7 +183,7 @@ export function ShoppingCart() {
       </DialogTrigger>
 
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        {isSuccess ? (
+        {step === 'success' ? (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-green-600">
@@ -185,23 +202,22 @@ export function ShoppingCart() {
               </div>
               <div>
                 <p className="font-medium">Verwendungszweck</p>
-                <p>
-                  Kunstrasen {successReservationId ?? '—'}
-                  {" - "}
-                  {successAnonymous || !successDonorName ? 'Anonym' : successDonorName}
-                </p>
+                <p>{purposeText}</p>
               </div>
               <p className="text-xs text-muted-foreground">
                 Bitte unbedingt die Reservierungs-ID im Verwendungszweck angeben (Zuordnung).
               </p>
             </div>
             <DialogFooter>
-              <DialogClose render={<Button />}>
-                Schließen
-              </DialogClose>
+              <Button
+                onClick={handleBackToField}
+                className="bg-sc-yellow text-sc-navy hover:bg-sc-yellow/90"
+              >
+                Zurück zur Spendenseite
+              </Button>
             </DialogFooter>
           </>
-        ) : isCheckout ? (
+        ) : step === 'checkout' ? (
           <>
             <DialogHeader>
               <DialogTitle>Spende abschließen</DialogTitle>
@@ -329,7 +345,7 @@ export function ShoppingCart() {
               </div>
 
               <DialogFooter className="gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsCheckout(false)}>
+                <Button type="button" variant="outline" onClick={() => setStep('cart')}>
                   Zurück
                 </Button>
                 <Button type="submit" disabled={isSubmitting} className="bg-sc-yellow text-sc-navy hover:bg-sc-yellow/90">
@@ -398,15 +414,15 @@ export function ShoppingCart() {
                   <span className="text-sc-yellow">{formatEuro(total)}</span>
                 </div>
 
-                <DialogFooter className="gap-2">
-                  <Button variant="outline" onClick={clearSelection}>
+                <div className="space-y-2">
+                  <Button onClick={() => setStep('checkout')} className="w-full bg-sc-yellow text-sc-navy hover:bg-sc-yellow/90">
+                    Jetzt reservieren
+                  </Button>
+                  <Button variant="outline" onClick={clearSelection} className="w-full">
                     <Trash2 className="w-4 h-4 mr-2" />
                     Leeren
                   </Button>
-                  <Button onClick={() => setIsCheckout(true)} className="bg-sc-yellow text-sc-navy hover:bg-sc-yellow/90">
-                    Zur Kasse
-                  </Button>
-                </DialogFooter>
+                </div>
               </>
             )}
           </>

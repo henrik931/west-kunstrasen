@@ -9,6 +9,20 @@ import { formatEuro } from '@/lib/utils'
 import { type ReservationDTO } from '@/lib/types'
 import { Check, X, Loader2, Lock, RefreshCw, LogOut } from 'lucide-react'
 
+const berlinDateTime = new Intl.DateTimeFormat('de-DE', {
+  timeZone: 'Europe/Berlin',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+function formatBerlinDateTime(value: string | Date) {
+  const date = typeof value === 'string' ? new Date(value) : value
+  return berlinDateTime.format(date)
+}
+
 type ReservationWithDetails = ReservationDTO
 
 export default function AdminPage() {
@@ -516,6 +530,10 @@ function ReservationCard({
     return acc
   }, { goal: 0, penalty: 0, kickoff: 0, field: 0 })
 
+  const donorDisplay = reservation.anonymous
+    ? 'Anonym'
+    : (reservation.donorName?.trim() || reservation.buyerName)
+
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-6">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
@@ -526,17 +544,12 @@ function ReservationCard({
           </div>
           <p className="font-semibold text-lg">{reservation.buyerName}</p>
           <p className="text-sm text-white/60">{reservation.buyerEmail}</p>
+          <p className="text-sm text-white/60">Spender: {donorDisplay}</p>
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold text-sc-yellow">{formatEuro(reservation.totalAmount)}</p>
           <p className="text-sm text-white/40">
-            {new Date(reservation.createdAt).toLocaleDateString('de-DE', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            {formatBerlinDateTime(reservation.createdAt)}
           </p>
         </div>
       </div>
@@ -605,13 +618,7 @@ function ReservationCard({
 
       {reservation.status === 'paid' && reservation.paidAt && (
         <p className="text-sm text-green-400">
-          Bezahlt am {new Date(reservation.paidAt).toLocaleDateString('de-DE', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          Bezahlt am {formatBerlinDateTime(reservation.paidAt)}
         </p>
       )}
     </div>

@@ -31,24 +31,14 @@ export default function ImpressumPage() {
               <p>Apenrader Str. 42</p>
               <p>50825 Köln</p>
               <p className="mt-4">
-                <strong>Vereinsregister:</strong> Amtsgericht Köln<br />
-                <strong>Registernummer:</strong> VR [Nummer einfügen]
+                <strong>Vereinsregister:</strong> Amtsgericht Köln, VR 4832
               </p>
             </address>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-sc-yellow mb-4">Vertreten durch</h2>
-            <p className="text-white/80">
-              Den Vorstand gemäß Satzung<br />
-              [Namen der Vorstandsmitglieder einfügen]
-            </p>
-          </section>
-
-          <section>
             <h2 className="text-xl font-semibold text-sc-yellow mb-4">Kontakt</h2>
             <p className="text-white/80">
-              <strong>Telefon:</strong> [Telefonnummer einfügen]<br />
               <strong>E-Mail:</strong>{' '}
               <a href="mailto:kontakt@sc-west-koeln.de" className="text-sc-yellow hover:underline">
                 kontakt@sc-west-koeln.de
@@ -58,11 +48,20 @@ export default function ImpressumPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-sc-yellow mb-4">Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
-            <p className="text-white/80">
-              [Name des Verantwortlichen]<br />
-              Apenrader Str. 42<br />
-              50825 Köln
-            </p>
+            <div className="text-white/80 space-y-3">
+              <p>
+                <span className="underline">Vertreten durch BGB Vorstand SC West Köln</span>
+              </p>
+              <ul className="space-y-1">
+                <li>Kurt Nürnberg</li>
+                <li>Natascha de Palma</li>
+                <li>Natascha Lightfoot</li>
+              </ul>
+              <address className="not-italic">
+                Apenrader Str. 42<br />
+                50825 Köln
+              </address>
+            </div>
           </section>
 
           <section>
@@ -151,4 +150,3 @@ export default function ImpressumPage() {
     </div>
   )
 }
-
