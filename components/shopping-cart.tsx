@@ -191,14 +191,14 @@ export function ShoppingCart() {
                 Reservierung erfolgreich!
               </DialogTitle>
               <DialogDescription>
-                Vielen Dank für Ihre Spende. Sie erhalten in Kürze eine E-Mail mit den Zahlungsinformationen.
+                Vielen Dank für Ihre Spende. Bitte überweisen Sie das Geld innerhalb der nächsten 24 Stunden an folgenden Empfänger:
               </DialogDescription>
             </DialogHeader>
             <div className="bg-muted p-4 rounded-lg space-y-3 text-sm">
               <div>
                 <p className="font-medium">Zahlungsinformationen</p>
                 <p>Empfänger: SC West Köln 1900/11 e.V.</p>
-                <p>IBAN: DE46 3806 0185 4901 5910 62</p>
+                <p>IBAN: DE46 3806 0186 4901 5910 62</p>
               </div>
               <div>
                 <p className="font-medium">Verwendungszweck</p>
