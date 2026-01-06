@@ -301,7 +301,7 @@ function FAQSection() {
     },
     {
       question: "Welche Bankverbindung gilt für die Überweisung?",
-      answer: `Empfänger: SC West Köln 1900/11 e.V. IBAN: DE46 3806 0185 4901 5910 62. Verwendungszweck: Spende Kunstrasen {Reservierungs-ID} | {Name auf Spendertafel bzw. Anonym}.`,
+      answer: `Empfänger: SC West Köln 1900/11 e.V. IBAN: DE46 3806 0186 4901 5910 62. Verwendungszweck: Spende Kunstrasen {Reservierungs-ID} | {Name auf Spendertafel bzw. Anonym}.`,
     },
     {
       question: "Was passiert nach der Spende?",
