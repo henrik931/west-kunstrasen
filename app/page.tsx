@@ -297,7 +297,7 @@ function FAQSection() {
   const faqs = [
     {
       question: "Wie funktioniert die Spende?",
-      answer: `Nach der Reservierung erhalten Sie eine E-Mail mit allen Zahlungsinformationen. Die Spende erfolgt per Banküberweisung. Bitte verwenden Sie unbedingt den angegebenen Verwendungszweck, damit wir Ihre Spende zuordnen können.`,
+      answer: `Nach der Reservierung erhalten Sie die Zahlungsinformationen. Die Spende erfolgt per Banküberweisung. Bitte verwenden Sie unbedingt den angegebenen Verwendungszweck, damit wir Ihre Spende zuordnen können.`,
     },
     {
       question: "Welche Bankverbindung gilt für die Überweisung?",
