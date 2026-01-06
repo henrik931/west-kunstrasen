@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParcelContext } from '@/lib/parcel-context'
-import { formatEuro } from '@/lib/utils'
+import { formatEuro, formatReservationReference } from '@/lib/utils'
 import { getParcelById, FIELD_CONFIG } from '@/lib/parcels'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -157,7 +157,10 @@ export function ShoppingCart() {
     document.getElementById('feld')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const purposeText = `Spende Kunstrasen ${successReservationId ?? '—'} | ${
+  const reservationReference = successReservationId
+    ? formatReservationReference(successReservationId)
+    : '—'
+  const purposeText = `Spende Kunstrasen ${reservationReference} | ${
     successAnonymous || !successDonorName ? 'Anonym' : successDonorName
   }`
 
@@ -191,7 +194,7 @@ export function ShoppingCart() {
                 Reservierung erfolgreich!
               </DialogTitle>
               <DialogDescription>
-                Vielen Dank für Ihre Spende. Bitte überweisen Sie das Geld innerhalb der nächsten 24 Stunden an folgenden Empfänger:
+                Vielen Dank für Ihre Spende. Bitte überweisen Sie das Geld innerhalb von 4 Tagen an folgenden Empfänger:
               </DialogDescription>
             </DialogHeader>
             <div className="bg-muted p-4 rounded-lg space-y-3 text-sm">
@@ -222,7 +225,7 @@ export function ShoppingCart() {
             <DialogHeader>
               <DialogTitle>Spende abschließen</DialogTitle>
               <DialogDescription>
-                Bitte geben Sie Ihre Kontaktdaten ein. Nach der Reservierung erhalten Sie eine E-Mail mit den Zahlungsinformationen.
+                Bitte geben Sie Ihre Kontaktdaten ein. Auf der nächsten Seite erhalten Sie die Zahlungsinformationen.
               </DialogDescription>
             </DialogHeader>
 

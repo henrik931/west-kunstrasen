@@ -24,3 +24,7 @@ export function generateReservationId(): string {
   const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase()
   return `RES-${timePart}${randomPart}`
 }
+
+export function formatReservationReference(reservationId: string): string {
+  return reservationId.replaceAll("-", " ")
+}

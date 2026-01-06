@@ -1,7 +1,7 @@
 import Mailjet from "node-mailjet";
 import { getParcelById } from "./parcels";
 import type { ReservationDTO } from "./types";
-import { formatEuro } from "./utils";
+import { formatEuro, formatReservationReference } from "./utils";
 
 function getMailjetClient() {
   return new Mailjet({
@@ -60,7 +60,8 @@ function getPurposeText(reservation: ReservationDTO) {
     reservation.anonymous || !reservation.donorName
       ? "Anonym"
       : reservation.donorName;
-  return `Spende Kunstrasen ${reservation.id} | ${donor}`;
+  const reference = formatReservationReference(reservation.id);
+  return `Spende Kunstrasen ${reference} | ${donor}`;
 }
 
 function generateEmailHtml(reservation: ReservationDTO): string {
@@ -120,7 +121,7 @@ function generateEmailHtml(reservation: ReservationDTO): string {
           hour: "2-digit",
           minute: "2-digit",
         })}</p>
-        <p style="margin: 5px 0 0 0; color: #64648a;"><strong>Gültigkeit:</strong> 24 Stunden</p>
+        <p style="margin: 5px 0 0 0; color: #64648a;"><strong>Gültigkeit:</strong> innerhalb von 4 Tagen</p>
       </div>
       
       <h3 style="color: #262667; margin: 20px 0 15px 0; font-size: 16px;">Ihre Parzellen</h3>
@@ -155,7 +156,7 @@ function generateEmailHtml(reservation: ReservationDTO): string {
       
       <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #F7E816;">
         <p style="margin: 0; color: #856404; font-size: 14px;">
-          <strong>Wichtig:</strong> Bitte überweisen Sie den Betrag innerhalb von 24 Stunden. Nach Zahlungseingang erhalten Sie eine Bestätigung.
+          <strong>Wichtig:</strong> Bitte überweisen Sie den Betrag innerhalb von 4 Tagen. Nach Zahlungseingang erhalten Sie eine Bestätigung.
         </p>
       </div>
       
@@ -200,7 +201,7 @@ RESERVIERUNGSDETAILS
 --------------------
 Reservierungsnummer: ${reservation.id}
 Datum: ${new Date(reservation.createdAt).toLocaleDateString("de-DE")}
-Gültigkeit: 24 Stunden
+Gültigkeit: innerhalb von 4 Tagen
 
 IHRE PARZELLEN
 --------------
@@ -215,7 +216,7 @@ IBAN: DE46 3806 0186 4901 5910 62
 Verwendungszweck: ${getPurposeText(reservation)}
 Betrag: ${formatEuro(reservation.totalAmount)}
 
-WICHTIG: Bitte überweisen Sie den Betrag innerhalb von 24 Stunden.
+WICHTIG: Bitte überweisen Sie den Betrag innerhalb von 4 Tagen.
 Nach Zahlungseingang erhalten Sie eine Bestätigung.
 
 Bei Fragen: ${getReplyToEmail()}

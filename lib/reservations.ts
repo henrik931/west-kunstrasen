@@ -4,6 +4,7 @@ import { Prisma, ReservationStatus as PrismaReservationStatus } from "@prisma/cl
 import { prisma } from "@/lib/prisma";
 import type { ParcelStatus } from "@/lib/parcels";
 import type { ReservationDTO, ReservationStatus } from "@/lib/types";
+import { RESERVATION_TTL_MS } from "@/lib/constants";
 
 const STATUS_MAP: Record<PrismaReservationStatus, ReservationStatus> = {
   PENDING: "pending",
@@ -132,7 +133,7 @@ export async function areParcelsAvailable(parcelIds: string[]): Promise<boolean>
 export async function createReservation(
   input: CreateReservationInput
 ): Promise<ReservationDTO> {
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + RESERVATION_TTL_MS);
 
   try {
     const reservation = await prisma.$transaction(async (tx) => {
@@ -282,7 +283,7 @@ export async function expireReservations(): Promise<number> {
 
   return prisma.$transaction(async (tx) => {
     const expiring = await tx.reservation.findMany({
-      where: { status: "PENDING", expiresAt: { lt: now } },
+      where: { status: "PENDING", expiresAt: { lte: now } },
       select: { id: true },
     });
 

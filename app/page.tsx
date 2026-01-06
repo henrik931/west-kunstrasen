@@ -309,7 +309,7 @@ function FAQSection() {
     },
     {
       question: "Wie lange ist meine Reservierung gültig?",
-      answer: `Ihre Reservierung ist 24 Stunden gültig. Sollte innerhalb dieser Zeit keine Spende eingehen, werden die Parzellen wieder freigegeben.`,
+      answer: `Bitte überweisen Sie innerhalb von 4 Tagen. Sollte innerhalb von 4 Tagen keine Spende eingehen, werden die Parzellen wieder freigegeben.`,
     },
     {
       question: "Kann ich meine Reservierung stornieren?",
