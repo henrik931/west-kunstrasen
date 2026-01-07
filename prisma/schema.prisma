@@ -60,5 +60,5 @@ model ReservationItem {
 
   @@index([reservationId])
   @@index([parcelId])
-  @@unique([parcelId, active]) // sorgt dafür: pro parcelId nur 1x active=true
+  @@index([parcelId, active])
 }

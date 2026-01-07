@@ -23,6 +23,16 @@ function formatBerlinDateTime(value: string | Date) {
   return berlinDateTime.format(date)
 }
 
+function getRemaining(expiresAtIso: string): { label: string; isExpired: boolean } {
+  const diffMs = new Date(expiresAtIso).getTime() - Date.now()
+  if (diffMs <= 0) {
+    return { label: 'Abgelaufen', isExpired: true }
+  }
+  const hours = Math.floor(diffMs / 3600000)
+  const minutes = Math.floor((diffMs % 3600000) / 60000)
+  return { label: `Läuft ab in ${hours}h ${minutes}m`, isExpired: false }
+}
+
 type ReservationWithDetails = ReservationDTO
 
 export default function AdminPage() {
@@ -38,6 +48,8 @@ export default function AdminPage() {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [isExporting, setIsExporting] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [, setNowTick] = useState(Date.now())
 
   const buildQueryParams = useCallback(() => {
     const params = new URLSearchParams()
@@ -90,6 +102,16 @@ export default function AdminPage() {
       void fetchReservations()
     }
   }, [statusFilter, isAuthenticated, fetchReservations])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    const timer = setInterval(() => setNowTick(Date.now()), 60000)
+    return () => clearInterval(timer)
+  }, [mounted])
 
   const handleConfirm = async (reservationId: string) => {
     setActionLoading(reservationId)
@@ -437,6 +459,7 @@ export default function AdminPage() {
                   onCancel={handleCancel}
                   isLoading={actionLoading === reservation.id}
                   getStatusBadge={getStatusBadge}
+                  mounted={mounted}
                 />
               ))}
             </div>
@@ -456,6 +479,7 @@ export default function AdminPage() {
                   key={reservation.id}
                   reservation={reservation}
                   getStatusBadge={getStatusBadge}
+                  mounted={mounted}
                 />
               ))}
             </div>
@@ -474,6 +498,7 @@ export default function AdminPage() {
                   key={reservation.id}
                   reservation={reservation}
                   getStatusBadge={getStatusBadge}
+                  mounted={mounted}
                 />
               ))}
             </div>
@@ -493,6 +518,7 @@ export default function AdminPage() {
                   key={reservation.id}
                   reservation={reservation}
                   getStatusBadge={getStatusBadge}
+                  mounted={mounted}
                 />
               ))}
             </div>
@@ -515,12 +541,14 @@ function ReservationCard({
   onCancel,
   isLoading,
   getStatusBadge,
+  mounted,
 }: {
   reservation: ReservationWithDetails
   onConfirm?: (id: string) => void
   onCancel?: (id: string) => void
   isLoading?: boolean
   getStatusBadge: (status: ReservationDTO['status']) => React.ReactNode
+  mounted: boolean
 }) {
   const parcelCounts = reservation.parcels.reduce((acc, id) => {
     if (id.startsWith('goal-')) acc.goal++
@@ -533,6 +561,8 @@ function ReservationCard({
   const donorDisplay = reservation.anonymous
     ? 'Anonym'
     : (reservation.donorName?.trim() || reservation.buyerName)
+
+  const remaining = getRemaining(reservation.expiresAt)
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -548,9 +578,23 @@ function ReservationCard({
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold text-sc-yellow">{formatEuro(reservation.totalAmount)}</p>
-          <p className="text-sm text-white/40">
-            {formatBerlinDateTime(reservation.createdAt)}
-          </p>
+          {mounted && (
+            <>
+              <p className="text-sm text-white/40">
+                {formatBerlinDateTime(reservation.createdAt)}
+              </p>
+              {reservation.status === 'paid' && reservation.paidAt && (
+                <p className="text-sm text-green-400">
+                  Bezahlt am {formatBerlinDateTime(reservation.paidAt)}
+                </p>
+              )}
+              <p className="text-sm text-white/50">
+                {remaining.label}
+                {' · Ablauf: '}
+                {formatBerlinDateTime(reservation.expiresAt)}
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -614,12 +658,6 @@ function ReservationCard({
             Stornieren
           </Button>
         </div>
-      )}
-
-      {reservation.status === 'paid' && reservation.paidAt && (
-        <p className="text-sm text-green-400">
-          Bezahlt am {formatBerlinDateTime(reservation.paidAt)}
-        </p>
       )}
     </div>
   )

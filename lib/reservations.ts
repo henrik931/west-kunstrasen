@@ -88,7 +88,7 @@ export async function getSoldAndReservedParcels(): Promise<{
     prisma.reservationItem.findMany({
       where: {
         active: true,
-        reservation: { status: "PENDING" },
+        reservation: { status: "PENDING", expiresAt: { gt: new Date() } },
       },
       select: { parcelId: true },
     }),
@@ -297,7 +297,7 @@ export async function expireReservations(): Promise<number> {
     });
 
     await tx.reservationItem.updateMany({
-      where: { reservationId: { in: ids } },
+      where: { reservationId: { in: ids }, active: true },
       data: { active: false },
     });
 
